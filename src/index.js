@@ -17,6 +17,7 @@ const { Octokit } = require("octokit")
 const _ = require("lodash")
 
 dotenv.config()
+console.log("PAT is", core.getInput('pat'));
 const octokit = new Octokit({ auth: core.getInput('pat') })
 const notion = new Client({ auth: core.getInput('token') })
 
@@ -103,6 +104,7 @@ async function getIssuesFromNotionDatabase() {
  * @returns {Promise<Array<{ number: number, title: string, state: "open" | "closed", comment_count: number, url: string }>>}
  */
 async function getGitHubIssuesForRepository() {
+  console.log("Owner is", process.env.GITHUB_REPOSITORY.split("/")[1]);
   const issues = []
   const iterator = octokit.paginate.iterator(octokit.rest.issues.listForRepo, {
     owner: process.env.GITHUB_REPOSITORY.split("/")[1],
