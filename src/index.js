@@ -86,7 +86,7 @@ async function getIssuesFromNotionDatabase() {
     }
     cursor = next_cursor
   }
-  console.log(`${pages.length} issues successfully fetched.`)
+  console.log(`${pages.length} issues successfully fetched from Notion.`)
   return pages.map(page => {
     return {
       pageId: page.id,
