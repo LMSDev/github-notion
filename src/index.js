@@ -16,6 +16,8 @@ const dotenv = require("dotenv")
 const { Octokit } = require("octokit")
 const _ = require("lodash")
 
+console.log("Hello world")
+
 dotenv.config()
 console.log("PAT is", core.getInput('pat'));
 const octokit = new Octokit({ auth: core.getInput('pat') })
