@@ -54,6 +54,11 @@ async function syncNotionDatabaseWithGitHub() {
   const issues = await getGitHubIssuesForRepository()
   console.log(`Fetched ${issues.length} issues from GitHub repository.`)
 
+  // DEBUG
+  for (const issue of issues) {
+    console.log(JSON.stringify(issue));
+  }
+
   // Group issues into those that need to be created or updated in the Notion database.
   const { pagesToCreate, pagesToUpdate } = getNotionOperations(issues)
 
@@ -92,7 +97,7 @@ async function getIssuesFromNotionDatabase() {
   return pages.map(page => {
     return {
       pageId: page.id,
-      issueNumber: page.properties["Issue Number"].number,
+      issueNumber: page.properties["Number"].number,
     }
   })
 }
@@ -106,10 +111,11 @@ async function getIssuesFromNotionDatabase() {
  * @returns {Promise<Array<{ number: number, title: string, state: "open" | "closed", comment_count: number, url: string }>>}
  */
 async function getGitHubIssuesForRepository() {
-  console.log("Owner is", process.env.GITHUB_REPOSITORY.split("/")[1]);
+  console.log("Owner is", process.env.GITHUB_REPOSITORY.split("/")[0]);
+  console.log("Repo is", process.env.GITHUB_REPOSITORY.split("/")[1]);
   const issues = []
   const iterator = octokit.paginate.iterator(octokit.rest.issues.listForRepo, {
-    owner: process.env.GITHUB_REPOSITORY.split("/")[1],
+    owner: process.env.GITHUB_REPOSITORY.split("/")[0],
     repo: process.env.GITHUB_REPOSITORY.split("/")[1],
     state: "all",
     per_page: 100,
@@ -123,6 +129,16 @@ async function getGitHubIssuesForRepository() {
           state: issue.state,
           comment_count: issue.comments,
           url: issue.html_url,
+          description: issue.body, // New stuff.
+          labels: issue.labels.map(label => label.name),
+          reporter: {
+            login: issue.user.login,
+            url: issue.user.html_url
+          },
+          assignee: issue.assignee ? {
+            login: issue.assignee.login,
+            url: issue.assignee.html_url
+          } : null,
         })
       }
     }
@@ -210,12 +226,15 @@ async function updatePages(pagesToUpdate) {
  * @param {{ number: number, title: string, state: "open" | "closed", comment_count: number, url: string }} issue
  */
 function getPropertiesFromIssue(issue) {
-  const { title, number, state, comment_count, url } = issue
+  const { title, number, state, comment_count, url, description } = issue
+  const labelNames = issue.labels.flatMap(i => [{ name: i }]);
+  console.log(labelNames);
+
   return {
     Name: {
       title: [{ type: "text", text: { content: title } }],
     },
-    "Issue Number": {
+    "Number": {
       number,
     },
     State: {
@@ -227,5 +246,14 @@ function getPropertiesFromIssue(issue) {
     "Issue URL": {
       url,
     },
+    "Labels": {
+      multi_select: labelNames
+    },
+    "Assignee": {
+      select: issue.assignee ? { name: issue.assignee.login } : null
+    },
+    "Description": {
+      rich_text: [{ text: { content: description } }],
+    }
   }
 }
